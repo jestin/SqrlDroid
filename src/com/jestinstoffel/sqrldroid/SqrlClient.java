@@ -202,7 +202,7 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 	
 	private String GetUrlWithoutProtocol(String url) throws Exception {
-		// only use this variable for validity checking, never for any cryptographic features because ToLower() will modify nonces
+		// only use this variable for validity checking, never for any cryptographic features because toLower() will modify nonces
 		String lowerUrl = url.toLowerCase(Locale.ENGLISH);
 
 		if(lowerUrl.startsWith("sqrl://"))
