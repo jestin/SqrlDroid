@@ -2,7 +2,7 @@ package com.jestinstoffel.sqrldroid;
 
 public interface SqrlClientHandler {
 	byte[] CalculateMasterKey(byte[] masterIdentityKey, String password, byte[] salt) throws Exception;
-	byte[] CalculateMasterIdentityKey(byte[] masterKey, String password, byte[] salt);
+	byte[] CalculateMasterIdentityKey(byte[] masterKey, String password, byte[] salt) throws Exception;
 	SqrlData GetSqrlDataForLogin(byte[] masterKey, String url);
 	SqrlData GetSqrlDataForLogin(byte[] masterIdentityKey, String password, byte[] salt, String url);
 	SqrlData GetSqrlDataForLogin(SqrlIdentity identity, String password, String url);

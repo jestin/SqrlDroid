@@ -43,10 +43,24 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public byte[] CalculateMasterIdentityKey(byte[] masterKey, String password,
-			byte[] salt) {
-		// TODO Auto-generated method stub
-		return null;
+	public byte[] CalculateMasterIdentityKey(byte[] masterKey, String password, byte[] salt) throws Exception {
+		if(masterKey.length != 32)
+		{
+			throw new Exception("master key must be 256 bits (32 bytes).");
+		}
+
+		byte[] passwordKey = mPbkdf.GeneratePasswordKey(password, salt);
+
+		if(passwordKey.length != 32)
+		{
+			throw new Exception("password key must be 256 bits (32 bytes).  Check validity of PBKDF.");
+		}
+
+		byte[] masterIdentityKey = Xor(masterKey, passwordKey);
+
+		Arrays.fill(passwordKey, (byte)0);
+
+		return masterIdentityKey;
 	}
 
 	@Override
