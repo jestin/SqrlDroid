@@ -1,12 +1,12 @@
 package com.jestinstoffel.sqrldroid;
 
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Locale;
 
 import com.jestinstoffel.sqrldroid.crypto.HmacGenerator;
 import com.jestinstoffel.sqrldroid.crypto.PbkdfHandler;
+import com.jestinstoffel.sqrldroid.crypto.RandomByteGenerator;
 import com.jestinstoffel.sqrldroid.crypto.SqrlSigner;
 
 public class SqrlClient implements SqrlClientHandler {
@@ -14,16 +14,17 @@ public class SqrlClient implements SqrlClientHandler {
 	private HmacGenerator mHmac;
 	private PbkdfHandler mPbkdf;
 	private SqrlSigner mSigner;
-	private SecureRandom mPrng;
+	private RandomByteGenerator mPrng;
 	
 	public SqrlClient(
 			HmacGenerator hmac,
 			PbkdfHandler pbkdf,
-			SqrlSigner signer){
+			SqrlSigner signer,
+			RandomByteGenerator prng){
 		mHmac = hmac;
 		mPbkdf = pbkdf;
 		mSigner = signer;
-		mPrng = new SecureRandom();
+		mPrng = prng;
 	}
 
 	@Override
@@ -107,8 +108,8 @@ public class SqrlClient implements SqrlClientHandler {
 
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-		mPrng.nextBytes(identity.Salt);
-		mPrng.nextBytes(masterKey);
+		mPrng.getBytes(identity.Salt);
+		mPrng.getBytes(masterKey);
 
 		// XOR the generated master key with the entropy (making any potential backdoors in the implementation of SecureRandom irrelevent)
 		masterKey = Xor(masterKey, md.digest(entropy));
@@ -138,7 +139,7 @@ public class SqrlClient implements SqrlClientHandler {
 
 		// generate new salt
 		identity.Salt = new byte[8];
-		mPrng.nextBytes(identity.Salt);
+		mPrng.getBytes(identity.Salt);
 
 		// generate the new password key
 		byte[] newPasswordKey = mPbkdf.GeneratePasswordKey(newPassword, identity.Salt);
