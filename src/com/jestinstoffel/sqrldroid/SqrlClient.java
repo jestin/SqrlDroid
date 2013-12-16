@@ -28,13 +28,13 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public byte[] CalculateMasterKey(byte[] masterIdentityKey, String password, byte[] salt) throws Exception {
+	public byte[] calculateMasterKey(byte[] masterIdentityKey, String password, byte[] salt) throws Exception {
 		if(masterIdentityKey.length != 32)
 		{
 			throw new Exception("master identity key must be 256 bits (32 bytes).");
 		}
 
-		byte[] passwordKey = mPbkdf.GeneratePasswordKey(password, salt);
+		byte[] passwordKey = mPbkdf.generatePasswordKey(password, salt);
 
 		if(passwordKey.length != 32)
 		{
@@ -49,13 +49,13 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public byte[] CalculateMasterIdentityKey(byte[] masterKey, String password, byte[] salt) throws Exception {
+	public byte[] calculateMasterIdentityKey(byte[] masterKey, String password, byte[] salt) throws Exception {
 		if(masterKey.length != 32)
 		{
 			throw new Exception("master key must be 256 bits (32 bytes).");
 		}
 
-		byte[] passwordKey = mPbkdf.GeneratePasswordKey(password, salt);
+		byte[] passwordKey = mPbkdf.generatePasswordKey(password, salt);
 
 		if(passwordKey.length != 32)
 		{
@@ -70,14 +70,14 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public SqrlData GetSqrlDataForLogin(byte[] masterKey, String url) throws Exception {
-		String domain = GetDomainFromUrl(url);
-		byte[] privateKey = mHmac.GeneratePrivateKey(masterKey, domain);
+	public SqrlData getSqrlDataForLogin(byte[] masterKey, String url) throws Exception {
+		String domain = getDomainFromUrl(url);
+		byte[] privateKey = mHmac.generatePrivateKey(masterKey, domain);
 
 		SqrlData sqrlData = new SqrlData();
-		sqrlData.Url = GetUrlWithoutProtocol(url);
-		sqrlData.Signature = mSigner.Sign(privateKey, GetUrlWithoutProtocol(url));
-		sqrlData.PublicKey = mSigner.MakePublicKey(privateKey);
+		sqrlData.url = GetUrlWithoutProtocol(url);
+		sqrlData.signature = mSigner.sign(privateKey, GetUrlWithoutProtocol(url));
+		sqrlData.publicKey = mSigner.makePublicKey(privateKey);
 
 		Arrays.fill(privateKey, (byte)0);
 
@@ -85,9 +85,9 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public SqrlData GetSqrlDataForLogin(byte[] masterIdentityKey, String password, byte[] salt, String url) throws Exception {
-		byte[] masterKey = CalculateMasterKey(masterIdentityKey, password, salt);
-		SqrlData sqrlData = GetSqrlDataForLogin(masterKey, url);
+	public SqrlData getSqrlDataForLogin(byte[] masterIdentityKey, String password, byte[] salt, String url) throws Exception {
+		byte[] masterKey = calculateMasterKey(masterIdentityKey, password, salt);
+		SqrlData sqrlData = getSqrlDataForLogin(masterKey, url);
 
 		Arrays.fill(masterKey, (byte)0);
 
@@ -95,33 +95,33 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public SqrlData GetSqrlDataForLogin(SqrlIdentity identity, String password, String url) throws Exception {
-		return GetSqrlDataForLogin(identity.MasterIdentityKey, password, identity.Salt, url);
+	public SqrlData getSqrlDataForLogin(SqrlIdentity identity, String password, String url) throws Exception {
+		return getSqrlDataForLogin(identity.masterIdentityKey, password, identity.salt, url);
 	}
 
 	@Override
-	public SqrlIdentity CreateIdentity(String password, byte[] entropy) throws Exception {
+	public SqrlIdentity createIdentity(String password, byte[] entropy) throws Exception {
 		SqrlIdentity identity = new SqrlIdentity();
 
-		identity.Salt = new byte[8];
+		identity.salt = new byte[8];
 		byte[] masterKey = new byte[32];
 
 		MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-		mPrng.getBytes(identity.Salt);
+		mPrng.getBytes(identity.salt);
 		mPrng.getBytes(masterKey);
 
 		// XOR the generated master key with the entropy (making any potential backdoors in the implementation of SecureRandom irrelevent)
 		masterKey = Xor(masterKey, md.digest(entropy));
 
 		// call the SCrypt PBKDF to create the password key
-		byte[] passwordKey = mPbkdf.GeneratePasswordKey(password, identity.Salt);
+		byte[] passwordKey = mPbkdf.generatePasswordKey(password, identity.salt);
 
 		// get the partial hash for password verification
-		identity.PartialPasswordHash = mPbkdf.GetPartialHashFromPasswordKey(passwordKey);
+		identity.partialPasswordHash = mPbkdf.getPartialHashFromPasswordKey(passwordKey);
 
 		// XOR the master key and the password key to get the master identity key
-		identity.MasterIdentityKey = Xor(passwordKey, masterKey);
+		identity.masterIdentityKey = Xor(passwordKey, masterKey);
 
 		Arrays.fill(masterKey, (byte)0);
 		Arrays.fill(passwordKey, (byte)0);
@@ -130,25 +130,25 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public SqrlIdentity ChangePassword(String oldPassword, byte[] oldSalt, String newPassword, byte[] masterIdentityKey) throws Exception {
+	public SqrlIdentity changePassword(String oldPassword, byte[] oldSalt, String newPassword, byte[] masterIdentityKey) throws Exception {
 		SqrlIdentity identity = new SqrlIdentity();
 
 		// calculate the master key
-		byte[] oldPasswordKey = mPbkdf.GeneratePasswordKey(oldPassword, oldSalt);
+		byte[] oldPasswordKey = mPbkdf.generatePasswordKey(oldPassword, oldSalt);
 		byte[] masterKey = Xor(oldPasswordKey, masterIdentityKey);
 
 		// generate new salt
-		identity.Salt = new byte[8];
-		mPrng.getBytes(identity.Salt);
+		identity.salt = new byte[8];
+		mPrng.getBytes(identity.salt);
 
 		// generate the new password key
-		byte[] newPasswordKey = mPbkdf.GeneratePasswordKey(newPassword, identity.Salt);
+		byte[] newPasswordKey = mPbkdf.generatePasswordKey(newPassword, identity.salt);
 
 		// get the partial hash for password verification
-		identity.PartialPasswordHash = mPbkdf.GetPartialHashFromPasswordKey(newPasswordKey);
+		identity.partialPasswordHash = mPbkdf.getPartialHashFromPasswordKey(newPasswordKey);
 
 		// XOR the master key and the new password key to get the master identity key
-		identity.MasterIdentityKey = Xor(newPasswordKey, masterKey);
+		identity.masterIdentityKey = Xor(newPasswordKey, masterKey);
 
 		Arrays.fill(masterKey, (byte)0);
 		Arrays.fill(oldPasswordKey, (byte)0);
@@ -158,12 +158,12 @@ public class SqrlClient implements SqrlClientHandler {
 	}
 
 	@Override
-	public boolean VerifyPassword(String password, SqrlIdentity identity) {
-		return mPbkdf.VerifyPassword(password, identity.Salt, identity.PartialPasswordHash);
+	public boolean verifyPassword(String password, SqrlIdentity identity) {
+		return mPbkdf.verifyPassword(password, identity.salt, identity.partialPasswordHash);
 	}
 
 	@Override
-	public String GetDomainFromUrl(String url) throws Exception {
+	public String getDomainFromUrl(String url) throws Exception {
 		// strip off scheme
 		String domain = GetUrlWithoutProtocol(url);
 

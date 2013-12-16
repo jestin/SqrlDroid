@@ -11,7 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class DefaultHmacGenerator implements HmacGenerator {
 
 	@Override
-	public byte[] GeneratePrivateKey(byte[] masterKey, String Domain) throws NoSuchAlgorithmException, InvalidKeyException {
+	public byte[] generatePrivateKey(byte[] masterKey, String Domain) throws NoSuchAlgorithmException, InvalidKeyException {
 		Mac hmacSha256 = Mac.getInstance("hmacSHA256");
 		SecretKey key = new SecretKeySpec(masterKey, "HmacSHA1");
 		hmacSha256.init(key);

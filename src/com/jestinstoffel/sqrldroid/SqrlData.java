@@ -1,7 +1,7 @@
 package com.jestinstoffel.sqrldroid;
 
 public class SqrlData {
-	public String Url;
-	public byte[] Signature;
-	public byte[] PublicKey;
+	public String url;
+	public byte[] signature;
+	public byte[] publicKey;
 }
